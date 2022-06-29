@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<wsc:config name="Web_Service_Consumer_Config" doc:name="Web Service Consumer Config" doc:id="6afc5819-d5c1-4777-b60b-faf2a930f6fe" >
+		<wsc:connection wsdlLocation="http://localhost:8080/ws/countries.wsdl" service="CountriesPortService" port="CountriesPortSoap11" address="http://localhost:8080/ws">
+			<wsc:custom-transport-configuration >
+				<wsc:http-transport-configuration requesterConfig="HTTP_Request_configuration" />
+			</wsc:custom-transport-configuration>
+			<wsc:web-service-security  >
+				<wsc:sign-security-strategy >
+					<wsc:key-store-configuration keyStorePath="${ws.keystore.path}" alias="${ws.keystore.alias}" password="${ws.keystore.password}" keyPassword="${ws.keystore.keystore-password}" />
+					<wsc:sign-algorithm-configuration signatureKeyIdentifier="DIRECT_REFERENCE" signatureAlgorithm="RSAwithSHA1" >
+						<wsc:wss-parts >
+							<wsc:wss-part namespace="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" localname="Timestamp" encode="ELEMENT"/>
+						</wsc:wss-parts>
+					</wsc:sign-algorithm-configuration>
+				</wsc:sign-security-strategy>
+			
+			</wsc:web-service-security>
+		</wsc:connection>
+	</wsc:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="c55ea748-c62c-4702-b060-32bc20e117ec" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="b2dc3d93-54ce-4eea-929c-f4b94ac41724" />
+	<global-property doc:name="Global Property" doc:id="f680bc45-0a08-40f3-a811-b7ccfc8ba96d" name="mule.env" value="dev" />
+	<configuration-properties doc:name="Configuration properties" doc:id="d336bd93-db1d-4e72-88a7-53742ba10c1c" file="${mule.env}.properties" />
+	<flow name="ws-consumerFlow" doc:id="44e3d05f-dacf-42a6-9891-405e461da6f1" >
+		<http:listener doc:name="/test" doc:id="e22edff0-8ecc-40ee-a3e1-617127996098" config-ref="HTTP_Listener_config" path="test"/>
+		<ee:transform doc:name="Create Soap Request" doc:id="e4607492-45a6-433c-a0c3-bc62f756c5e8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://example.com/ws
+---
+{
+	ns0#getCountryRequest: {
+		ns0#name: attributes.queryParams.countryName	
+		}
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="wsheaders" ><![CDATA[%dw 2.0
+output application/xml
+
+ns wse http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd
+ns wsu http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd
+ns ns0 http://schemas.xmlsoap.org/soap/envelope/
+ns addressing  http://www.w3.org/2005/08/addressing
+
+var tz : String = "Australia/Melbourne"
+var timestampCreated = now() >> tz
+var timestampExpires = now() + |PT5M| >> tz
+
+---
+headers: {
+	wse#Security: {
+	  wsu#Timestamp: {
+	  	wsu#Created: timestampCreated,
+	  	wsu#Expires: timestampExpires
+	  }	
+	}
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<wsc:consume doc:name="Consume Country WS" doc:id="71439709-ce0f-40a9-94b8-70265b14249b" config-ref="Web_Service_Consumer_Config" operation="getCountry">
+			<wsc:message >
+				<wsc:headers ><![CDATA[#[vars.wsheaders]]]></wsc:headers>
+			</wsc:message>
+		</wsc:consume>
+		<ee:transform doc:name="Transform Message" doc:id="5c298442-679e-4c7a-ac47-d0720907ec99" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+ns ns0 http://example.com/ws
+output application/json
+---
+payload.body.ns0#getCountryResponse.ns0#country]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
