@@ -1,0 +1,9 @@
+server:
+  port: 8080
+  signature:
+    key-store: classpath:/jks/wscpoc.p12
+    key-store-password: 0226616dbdd7012f4ed6
+    key-alias: wscpoc
+    key-password: 0226616dbdd7012f4ed6
+    trust-store: classpath:/jks/wscpoc.p12
+    trust-store-password: 0226616dbdd7012f4ed6

@@ -1,12 +1,12 @@
-package com.example.weatherapp.repository;
+package com.example.wsapp.repository;
 
+import com.example.ws.Country;
+import com.example.ws.Currency;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
-import io.spring.guides.gs_producing_web_service.Country;
-import io.spring.guides.gs_producing_web_service.Currency;
 
 @Component
 public class CountryRepository {
@@ -22,6 +22,14 @@ public class CountryRepository {
     spain.setPopulation(46704314);
 
     countries.put(spain.getName(), spain);
+
+    Country australia = new Country();
+    australia.setName("Australia");
+    australia.setCapital("Canberra");
+    australia.setCurrency(Currency.AUD);
+    australia.setPopulation(240000);
+
+    countries.put(australia.getName(), australia);
 
     Country poland = new Country();
     poland.setName("Poland");
